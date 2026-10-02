@@ -1,0 +1,1437 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RuangNovel - Tulis, Baca & Hubungkan Penulis</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Merriweather', 'serif'],
+                    },
+                    colors: {
+                        primary: '#6366f1', // Indigo 500
+                        primaryHover: '#4f46e5', // Indigo 600
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+        
+        .toast-enter {
+            animation: slideIn 0.3s ease-out forwards;
+        }
+        .toast-exit {
+            animation: slideOut 0.3s ease-in forwards;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes slideOut {
+            from { transform: translateY(0); opacity: 1; }
+            to { transform: translateY(-100%); opacity: 0; }
+        }
+
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;  
+            overflow: hidden;
+        }
+        .line-clamp-3 {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;  
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans min-h-screen flex flex-col">
+
+    <!-- Navbar -->
+    <nav class="bg-white shadow-sm sticky top-0 z-40 border-b border-gray-100">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center h-16 gap-4">
+                <!-- Logo -->
+                <div class="flex items-center cursor-pointer shrink-0" onclick="app.showView('home')">
+                    <i class="fa-solid fa-book-open-reader text-primary text-2xl mr-2"></i>
+                    <span class="font-bold text-xl tracking-tight text-gray-900 hidden sm:inline">Ruang<span class="text-primary">Novel</span></span>
+                </div>
+
+                <!-- Global Search Bar -->
+                <div class="flex-1 max-w-md mx-2">
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                        <input type="text" id="global-search" oninput="app.handleSearch(this.value)" placeholder="Cari novel, sinopsis, atau nama penulis..." class="w-full pl-10 pr-4 py-2 text-sm bg-gray-100/80 rounded-full border border-transparent focus:border-primary focus:bg-white outline-none transition">
+                    </div>
+                </div>
+                
+                <!-- Desktop Menu -->
+                <div class="hidden md:flex items-center space-x-3">
+                    <button onclick="app.showView('home')" class="text-gray-600 hover:text-primary px-3 py-2 rounded-lg font-medium transition text-sm">
+                        <i class="fa-solid fa-house mr-1"></i> Beranda
+                    </button>
+                    <button onclick="app.handleWriteNovelClick()" class="bg-primary text-white hover:bg-primaryHover px-4 py-2 rounded-full font-medium transition shadow-sm flex items-center text-sm">
+                        <i class="fa-solid fa-pen-nib mr-2"></i> Buat Novel
+                    </button>
+                    
+                    <div id="auth-section-desktop" class="ml-2 border-l pl-3">
+                        <!-- Injected via JS -->
+                    </div>
+                </div>
+
+                <!-- Mobile Menu Button -->
+                <div class="md:hidden flex items-center">
+                    <button id="mobile-menu-btn" class="text-gray-600 hover:text-gray-900 focus:outline-none p-2">
+                        <i class="fa-solid fa-bars text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Menu (Hidden by default) -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-t pb-4 px-4 space-y-2 shadow-lg absolute w-full left-0 z-50">
+            <button onclick="app.showView('home'); app.toggleMobileMenu()" class="block w-full text-left text-gray-600 hover:text-primary py-2 font-medium">
+                <i class="fa-solid fa-house mr-2"></i> Beranda
+            </button>
+            <button onclick="app.handleWriteNovelClick(); app.toggleMobileMenu()" class="block w-full text-left text-primary font-bold py-2">
+                <i class="fa-solid fa-pen-nib mr-2"></i> Buat Novel
+            </button>
+            <div id="auth-section-mobile" class="pt-2 border-t mt-2">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+    </nav>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 w-80 pointer-events-none"></div>
+
+    <!-- Main Content Area with Sidebar Layout -->
+    <main class="flex-grow max-w-7xl mx-auto w-full px-4 py-6 relative">
+        
+        <!-- Loading Overlay -->
+        <div id="global-loader" class="absolute inset-0 bg-gray-50/80 z-30 flex items-center justify-center hidden rounded-2xl min-h-[300px]">
+            <div class="flex flex-col items-center">
+                <i class="fa-solid fa-circle-notch fa-spin text-primary text-4xl mb-3"></i>
+                <span class="text-gray-600 font-medium text-sm">Memuat data...</span>
+            </div>
+        </div>
+
+        <!-- Main Layout Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+            <!-- LEFT SIDEBAR: List of Accounts / Authors -->
+            <aside class="lg:col-span-1 order-2 lg:order-1">
+                <div class="bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-gray-100 sticky top-20">
+                    <div class="flex items-center justify-between mb-4 border-b pb-3">
+                        <div class="flex items-center">
+                            <i class="fa-solid fa-users text-primary mr-2 text-lg"></i>
+                            <h2 class="font-bold text-gray-900 text-base">Komunitas Penulis</h2>
+                        </div>
+                        <span id="author-count-badge" class="bg-indigo-50 text-primary text-xs font-bold px-2.5 py-0.5 rounded-full">0</span>
+                    </div>
+
+                    <!-- Search Authors Filter -->
+                    <div class="mb-3">
+                        <input type="text" id="author-search" oninput="app.filterAuthorsList(this.value)" placeholder="Cari penulis..." class="w-full px-3 py-1.5 text-xs bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:border-primary">
+                    </div>
+
+                    <!-- Authors List Container -->
+                    <div id="sidebar-authors-list" class="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                        <!-- Injected via JS -->
+                    </div>
+                </div>
+            </aside>
+
+            <!-- RIGHT MAIN VIEW: Home, Profile, Write, Read -->
+            <section class="lg:col-span-3 order-1 lg:order-2">
+                
+                <!-- VIEW: Home (Daftar Novel) -->
+                <div id="view-home" class="view-section">
+                    <div class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-2xl p-6 md:p-8 text-white mb-6 shadow-sm">
+                        <h1 class="text-2xl md:text-3xl font-bold mb-2">Temukan Cerita & Penulis Hebat</h1>
+                        <p class="text-indigo-100 text-sm md:text-base max-w-xl mb-4">Baca karya fiksi original dari komunitas penulis atau mulai terbitkan bab pertamamu hari ini!</p>
+                        <button onclick="app.handleWriteNovelClick()" class="bg-white text-primary hover:bg-gray-100 px-5 py-2.5 rounded-full text-sm font-semibold transition shadow-md flex items-center">
+                            <i class="fa-solid fa-feather mr-2"></i> Mulai Menulis Sekarang
+                        </button>
+                    </div>
+
+                    <!-- Search Result Info Header -->
+                    <div id="search-info" class="hidden mb-4 flex justify-between items-center bg-indigo-50 p-3 rounded-xl border border-indigo-100">
+                        <span class="text-sm text-indigo-900 font-medium" id="search-info-text">Hasil pencarian...</span>
+                        <button onclick="app.clearSearch()" class="text-xs text-primary font-bold hover:underline">Clear Search</button>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div id="empty-state" class="hidden flex flex-col items-center justify-center py-16 text-center bg-white rounded-2xl border border-gray-100 p-6">
+                        <div class="bg-indigo-50 p-6 rounded-full mb-4">
+                            <i class="fa-solid fa-book-open text-primary text-5xl"></i>
+                        </div>
+                        <h2 class="text-xl font-bold text-gray-800 mb-2">Belum ada novel di sini</h2>
+                        <p class="text-gray-500 text-sm mb-6 max-w-md">Jadilah yang pertama menulis dan bagikan cerita menarikmu kepada seluruh pembaca!</p>
+                        <button onclick="app.handleWriteNovelClick()" class="bg-primary text-white px-6 py-2.5 rounded-full font-medium text-sm hover:bg-primaryHover transition shadow-md">
+                            Mulai Menulis
+                        </button>
+                    </div>
+
+                    <!-- Novel Grid -->
+                    <div id="novel-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                        <!-- Injected via JS -->
+                    </div>
+                </div>
+
+                <!-- VIEW: User Profile (Tampilan Profil Akun) -->
+                <div id="view-profile" class="view-section hidden">
+                    <button onclick="app.showView('home')" class="text-gray-500 hover:text-gray-800 mb-4 flex items-center text-xs font-medium transition bg-white py-2 px-4 rounded-full shadow-sm w-fit border border-gray-100">
+                        <i class="fa-solid fa-arrow-left mr-2"></i> Kembali ke Beranda
+                    </button>
+
+                    <div class="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm mb-6">
+                        <!-- Banner Header -->
+                        <div id="profile-banner" class="h-40 md:h-52 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 bg-cover bg-center relative"></div>
+                        
+                        <!-- Profile Header Body -->
+                        <div class="p-6 pt-0 relative">
+                            <div class="flex flex-col sm:flex-row sm:items-end justify-between -mt-16 sm:-mt-20 mb-4 gap-4">
+                                <div class="flex items-end gap-4">
+                                    <img id="profile-avatar" src="https://placehold.co/120x120/6366f1/ffffff?text=User" alt="Avatar" class="w-24 h-24 sm:w-28 sm:h-28 rounded-full border-4 border-white shadow-md object-cover bg-white">
+                                    <div class="mb-1">
+                                        <h2 id="profile-name" class="text-2xl font-bold text-gray-900 leading-tight">Nama Penulis</h2>
+                                        <p id="profile-id-text" class="text-xs text-gray-400">@penulis</p>
+                                    </div>
+                                </div>
+
+                                <!-- Action Buttons (Follow or Edit) -->
+                                <div id="profile-actions-container" class="mt-2 sm:mt-0">
+                                    <!-- Injected via JS -->
+                                </div>
+                            </div>
+
+                            <!-- Bio -->
+                            <p id="profile-bio" class="text-gray-600 text-sm mb-6 leading-relaxed max-w-2xl whitespace-pre-line">Belum ada bio singkat.</p>
+
+                            <!-- User Stats -->
+                            <div class="flex items-center gap-6 border-t border-b border-gray-100 py-3 text-sm">
+                                <div class="text-center sm:text-left">
+                                    <span id="stat-novels" class="font-bold text-gray-900 text-base block sm:inline">0</span>
+                                    <span class="text-gray-500 text-xs sm:text-sm"> Novel</span>
+                                </div>
+                                <div class="text-center sm:text-left">
+                                    <span id="stat-likes" class="font-bold text-gray-900 text-base block sm:inline">0</span>
+                                    <span class="text-gray-500 text-xs sm:text-sm"> Suka</span>
+                                </div>
+                                <div class="text-center sm:text-left">
+                                    <span id="stat-followers" class="font-bold text-gray-900 text-base block sm:inline">0</span>
+                                    <span class="text-gray-500 text-xs sm:text-sm"> Pengikut</span>
+                                </div>
+                                <div class="text-center sm:text-left">
+                                    <span id="stat-following" class="font-bold text-gray-900 text-base block sm:inline">0</span>
+                                    <span class="text-gray-500 text-xs sm:text-sm"> Mengikuti</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Author's Novels Section -->
+                    <div class="mb-4">
+                        <h3 class="text-lg font-bold text-gray-900 mb-3 flex items-center">
+                            <i class="fa-solid fa-book text-primary mr-2"></i> Novel Karya <span id="author-novel-title-name" class="ml-1">Penulis</span>
+                        </h3>
+                        <div id="profile-novels-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                            <!-- Injected via JS -->
+                        </div>
+                        <div id="profile-novels-empty" class="hidden bg-white p-8 rounded-2xl text-center border border-gray-100">
+                            <p class="text-gray-500 text-sm">Penulis ini belum menerbitkan novel.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: Write Novel Form -->
+                <div id="view-write" class="view-section hidden">
+                    <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100">
+                        <button onclick="app.showView('home')" class="text-gray-500 hover:text-gray-800 mb-6 flex items-center text-xs font-medium transition">
+                            <i class="fa-solid fa-arrow-left mr-2"></i> Kembali
+                        </button>
+                        <h2 class="text-2xl font-bold text-gray-900 mb-6 border-b pb-4">Tulis Novel Baru</h2>
+                        
+                        <form id="form-write" onsubmit="app.submitNovel(event)">
+                            <div class="mb-5">
+                                <label for="novel-title" class="block text-sm font-medium text-gray-700 mb-1">Judul Novel <span class="text-red-500">*</span></label>
+                                <input type="text" id="novel-title" required placeholder="Masukkan judul novel yang menarik..." class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition text-sm">
+                            </div>
+                            
+                            <div class="mb-5">
+                                <label for="novel-synopsis" class="block text-sm font-medium text-gray-700 mb-1">Sinopsis Singkat <span class="text-red-500">*</span></label>
+                                <textarea id="novel-synopsis" required rows="3" placeholder="Gambarkan garis besar cerita novelmu..." class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition resize-none text-sm"></textarea>
+                            </div>
+
+                            <div class="mb-8">
+                                <label for="novel-content" class="block text-sm font-medium text-gray-700 mb-1">Isi Cerita <span class="text-red-500">*</span></label>
+                                <textarea id="novel-content" required rows="12" placeholder="Tulis isi novel atau bab pertamamu di sini..." class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition resize-y font-serif text-base leading-relaxed"></textarea>
+                            </div>
+
+                            <div class="flex justify-end items-center gap-4">
+                                <button type="button" onclick="app.showView('home')" class="px-6 py-2.5 rounded-full font-medium text-sm text-gray-600 hover:bg-gray-100 transition">Batal</button>
+                                <button type="submit" id="btn-publish" class="bg-primary text-white px-8 py-2.5 rounded-full font-medium text-sm hover:bg-primaryHover transition shadow-md flex items-center">
+                                    <span>Terbitkan</span>
+                                    <i class="fa-solid fa-paper-plane ml-2"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- VIEW: Read Novel -->
+                <div id="view-read" class="view-section hidden">
+                    <button onclick="app.showView('home')" class="text-gray-500 hover:text-gray-800 mb-6 flex items-center text-xs font-medium transition bg-white py-2 px-4 rounded-full shadow-sm w-fit border border-gray-100">
+                        <i class="fa-solid fa-arrow-left mr-2"></i> Kembali ke Beranda
+                    </button>
+                    
+                    <article class="bg-white p-6 md:p-10 rounded-2xl shadow-sm border border-gray-100">
+                        <header class="mb-8 border-b border-gray-100 pb-8 text-center">
+                            <h1 id="read-title" class="text-3xl md:text-4xl font-bold text-gray-900 mb-4 font-serif leading-tight">Memuat Judul...</h1>
+                            <div class="flex items-center justify-center text-gray-500 text-sm gap-4 flex-wrap">
+                                <button id="btn-read-author" onclick="" class="flex items-center hover:text-primary transition font-medium text-gray-700 bg-gray-50 px-3 py-1 rounded-full border border-gray-200">
+                                    <i class="fa-solid fa-user-pen mr-2 text-primary"></i>
+                                    <span id="read-author">Penulis</span>
+                                </button>
+                                <span>&bull;</span>
+                                <div class="flex items-center text-xs text-gray-400">
+                                    <i class="fa-regular fa-clock mr-1.5"></i>
+                                    <span id="read-date">Tanggal</span>
+                                </div>
+                            </div>
+                        </header>
+
+                        <div class="mb-8 bg-indigo-50/50 p-5 rounded-xl border border-indigo-100">
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-primary mb-2">Sinopsis</h3>
+                            <p id="read-synopsis" class="text-gray-700 italic leading-relaxed text-sm">Memuat sinopsis...</p>
+                        </div>
+
+                        <div id="read-content" class="prose max-w-none font-serif text-base md:text-lg text-gray-800 leading-loose whitespace-pre-wrap mb-8">
+                            Memuat konten cerita...
+                        </div>
+
+                        <!-- Like Button Bar -->
+                        <div class="border-t border-gray-100 pt-6 flex justify-between items-center">
+                            <button id="btn-like-read" onclick="" class="flex items-center gap-2 bg-rose-50 text-rose-600 hover:bg-rose-100 px-5 py-2.5 rounded-full font-medium text-sm transition">
+                                <i class="fa-regular fa-heart text-lg" id="read-like-icon"></i>
+                                <span id="read-like-text">Suka (0)</span>
+                            </button>
+
+                            <button onclick="app.openProfileView(app.currentReadingNovelAuthorId)" class="text-primary hover:underline text-sm font-semibold">
+                                Lihat Profil Penulis <i class="fa-solid fa-chevron-right ml-1"></i>
+                            </button>
+                        </div>
+                    </article>
+                </div>
+
+            </section>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 py-6 text-center text-gray-500 text-xs sm:text-sm">
+            &copy; <span id="current-year"></span> RuangNovel. Komunitas Menulis & Membaca Cerita Digital.
+        </div>
+    </footer>
+
+    <!-- Auth Modal (Login / Register) -->
+    <div id="modal-auth" class="fixed inset-0 bg-gray-900/60 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden transform scale-95 transition-transform duration-300" id="modal-auth-content">
+            
+            <!-- Modal Header (Tabs) -->
+            <div class="flex border-b relative">
+                <button id="tab-login" onclick="app.switchAuthTab('login')" class="flex-1 py-4 text-center font-semibold text-primary border-b-2 border-primary transition text-sm">Masuk</button>
+                <button id="tab-register" onclick="app.switchAuthTab('register')" class="flex-1 py-4 text-center font-semibold text-gray-500 hover:text-gray-700 border-b-2 border-transparent transition text-sm">Daftar Akun</button>
+                <button onclick="app.closeAuthModal()" class="absolute top-3 right-4 text-gray-400 hover:text-gray-700 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <div class="p-6 md:p-8">
+                <div id="auth-alert" class="hidden mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-xs border border-red-100 flex items-start">
+                    <i class="fa-solid fa-circle-exclamation mt-0.5 mr-2"></i>
+                    <span id="auth-alert-msg">Pesan kesalahan</span>
+                </div>
+
+                <!-- Login Form -->
+                <form id="form-login" onsubmit="app.handleAuth(event, 'login')">
+                    <div class="mb-4">
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" id="login-email" required class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition text-sm">
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Password</label>
+                        <input type="password" id="login-password" required class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition text-sm">
+                    </div>
+                    <button type="submit" id="btn-login" class="w-full bg-primary text-white py-3 rounded-xl font-medium text-sm hover:bg-primaryHover transition flex justify-center items-center">
+                        <span>Masuk</span>
+                    </button>
+                </form>
+
+                <!-- Register Form -->
+                <form id="form-register" onsubmit="app.handleAuth(event, 'register')" class="hidden">
+                    <div class="mb-4">
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Nama Tampilan / Penulis</label>
+                        <input type="text" id="reg-name" required class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition text-sm" placeholder="Contoh: Penulis Senja">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" id="reg-email" required class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition text-sm">
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Password</label>
+                        <input type="password" id="reg-password" required minlength="6" class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition text-sm" placeholder="Minimal 6 karakter">
+                    </div>
+                    <button type="submit" id="btn-register" class="w-full bg-primary text-white py-3 rounded-xl font-medium text-sm hover:bg-primaryHover transition flex justify-center items-center">
+                        <span>Buat Akun</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Profile Modal -->
+    <div id="modal-edit-profile" class="fixed inset-0 bg-gray-900/60 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden transform scale-95 transition-transform duration-300 relative" id="modal-edit-profile-content">
+            <div class="p-5 border-b flex justify-between items-center">
+                <h3 class="font-bold text-gray-900 text-base">Edit Profil Penulis</h3>
+                <button onclick="app.closeEditProfileModal()" class="text-gray-400 hover:text-gray-700 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <form id="form-edit-profile" onsubmit="app.submitEditProfile(event)" class="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Nama Tampilan (Display Name)</label>
+                    <input type="text" id="edit-display-name" required class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Bio Singkat</label>
+                    <textarea id="edit-bio" rows="3" placeholder="Tuliskan sedikit tentang dirimu atau karya tulismu..." class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none text-sm resize-none"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">URL Foto Profil (PP)</label>
+                    <input type="url" id="edit-avatar-url" placeholder="https://..." class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none text-sm mb-2">
+                    <p class="text-[11px] text-gray-400 mb-2">Atau pilih preset foto profil berikut:</p>
+                    <div class="flex gap-2" id="avatar-presets">
+                        <!-- Injected via JS -->
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">URL Gambar Banner</label>
+                    <input type="url" id="edit-banner-url" placeholder="https://..." class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none text-sm mb-2">
+                    <p class="text-[11px] text-gray-400 mb-2">Atau pilih tema gradient banner berikut:</p>
+                    <div class="grid grid-cols-4 gap-2" id="banner-presets">
+                        <!-- Injected via JS -->
+                    </div>
+                </div>
+
+                <div class="pt-4 flex justify-end gap-3 border-t">
+                    <button type="button" onclick="app.closeEditProfileModal()" class="px-5 py-2 rounded-full text-xs font-medium text-gray-600 hover:bg-gray-100">Batal</button>
+                    <button type="submit" id="btn-save-profile" class="bg-primary text-white px-6 py-2 rounded-full text-xs font-medium hover:bg-primaryHover shadow-sm">Simpan Profil</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Firebase Logic & Application Code -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, updateDoc, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Environment Config
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'ruangnovel-app';
+        let firebaseConfig = {};
+        
+        try {
+            if (typeof __firebase_config !== 'undefined') {
+                firebaseConfig = JSON.parse(__firebase_config);
+            } else {
+                throw new Error("Config not found");
+            }
+        } catch (e) {
+            console.warn("Menggunakan konfigurasi fallback Firebase.");
+            firebaseConfig = {
+                apiKey: "dummy", authDomain: "dummy.firebaseapp.com", projectId: "dummy", storageBucket: "dummy.appspot.com", messagingSenderId: "123", appId: "1:123:web:123"
+            };
+        }
+
+        const appFirebase = initializeApp(firebaseConfig);
+        const db = getFirestore(appFirebase);
+        const auth = getAuth(appFirebase);
+
+        // Strict Paths for Public Data (RULE 1)
+        const NOVELS_PATH = ['artifacts', appId, 'public', 'data', 'novels'];
+        const PROFILES_PATH = ['artifacts', appId, 'public', 'data', 'profiles'];
+
+        const SAMPLE_PROFILES = {
+            'author-1': {
+                userId: 'author-1',
+                displayName: 'Aria Lestari',
+                bio: 'Penulis fiksi fantasi dan sains populer. Senang membagikan petualangan imajinatif.',
+                avatarUrl: 'https://api.dicebear.com/7.x/bottts/svg?seed=AriaLestari',
+                bannerUrl: 'from-indigo-500 via-purple-500 to-pink-500',
+                followers: ['author-2'],
+                following: [],
+                createdAt: Date.now() - 86400000 * 30
+            },
+            'author-2': {
+                userId: 'author-2',
+                displayName: 'Rian Nusantara',
+                bio: 'Pena senja yang suka menulis kisah-kisah romansa perkotaan dan inspirasi kehidupan.',
+                avatarUrl: 'https://api.dicebear.com/7.x/bottts/svg?seed=RianNusantara',
+                bannerUrl: 'from-blue-600 via-teal-500 to-emerald-400',
+                followers: [],
+                following: ['author-1'],
+                createdAt: Date.now() - 86400000 * 20
+            }
+        };
+
+        const SAMPLE_NOVELS = [
+            {
+                id: 'novel-1',
+                title: 'Jejak Di Batas Waktu',
+                synopsis: 'Sebuah petualangan menjelajah garis dimensi untuk menyelamatkan masa depan kota tercinta dari ancaman bayangan misterius.',
+                content: 'Bab 1: Awal Mula\n\nHujan gerimis menyapu lorong-lorong tua kota Aethelgard. Ren berdiri di tepi jendela, memandangi jam pasir mekanis yang berputar melawan gravitasi. Sesuatu yang tak wajar sedang terjadi pada ruang dan waktu...\n\n"Jika kita tidak melangkah sekarang," bisik Livia dari belakangnya, "pintu ruang-waktu akan tertutup selamanya."\n\nRen menarik napas dalam-dalam, menggenggam kompas kristal di tangannya, dan bersiap melompati gerbang yang kian meredup.',
+                authorId: 'author-1',
+                authorName: 'Aria Lestari',
+                createdAt: Date.now() - 86400000 * 2,
+                likes: ['author-2']
+            },
+            {
+                id: 'novel-2',
+                title: 'Melodi Senja di Kota Tua',
+                synopsis: 'Kisah tentang dua jiwa yang bertemu di sebuah kedai kopi tersembunyi dan saling menyembuhkan luka masa lalu lewat alunan musik.',
+                content: 'Bab 1: Dentang Piano Pertama\n\nSuara dentang piano mengalun lembut di tengah bisingnya lalu lintas kota sore itu. Maya menyusuri alunan nada tersebut hingga membawanya ke depan pintu kayu berwarna cokelat tua.\n\nDi balik pintu itu, seorang pria tampak jemarinya menari menekan tuts piano dengan mata terpejam. Musik itu tidak hanya sekadar melodi, tapi terasa seperti ungkapan kerinduan yang mendalam.',
+                authorId: 'author-2',
+                authorName: 'Rian Nusantara',
+                createdAt: Date.now() - 86400000 * 5,
+                likes: []
+            }
+        ];
+
+        const AppState = {
+            currentUser: null,
+            novels: [],
+            profiles: {}, // Map of profile objects keyed by userId
+            unsubscribeNovels: null,
+            unsubscribeProfiles: null,
+            isAuthLoading: true,
+            pendingNovel: null,
+            userHasExplicitlyLoggedIn: false,
+            searchQuery: '',
+            authorSearchQuery: '',
+            activeProfileUserId: null,
+            currentReadingNovelId: null,
+            currentReadingNovelAuthorId: null,
+            isFallbackMode: false,
+
+            // Avatar & Banner Presets
+            avatarPresets: [
+                'https://api.dicebear.com/7.x/bottts/svg?seed=Penulis1',
+                'https://api.dicebear.com/7.x/bottts/svg?seed=PenaEmas',
+                'https://api.dicebear.com/7.x/bottts/svg?seed=CeritaIndah',
+                'https://api.dicebear.com/7.x/bottts/svg?seed=SastraKu'
+            ],
+            bannerPresets: [
+                'from-indigo-500 via-purple-500 to-pink-500',
+                'from-blue-600 via-teal-500 to-emerald-400',
+                'from-rose-500 via-orange-400 to-amber-300',
+                'from-slate-800 via-indigo-950 to-purple-900'
+            ]
+        };
+
+        window.app = {
+            
+            init: async function() {
+                document.getElementById('current-year').textContent = new Date().getFullYear();
+                this.showLoader(true);
+                
+                document.getElementById('mobile-menu-btn').addEventListener('click', this.toggleMobileMenu);
+                this.renderPresets();
+
+                const loadingTimeout = setTimeout(() => {
+                    if (AppState.novels.length === 0) {
+                        this.useFallbackData();
+                    }
+                    this.showLoader(false);
+                }, 1800);
+
+                this.setupAuth(loadingTimeout);
+            },
+
+            useFallbackData: function() {
+                AppState.isFallbackMode = true;
+                if (Object.keys(AppState.profiles).length === 0) {
+                    AppState.profiles = { ...SAMPLE_PROFILES };
+                }
+                if (AppState.novels.length === 0) {
+                    AppState.novels = [...SAMPLE_NOVELS];
+                }
+                this.renderNovels();
+                this.renderSidebarAuthors();
+                if (AppState.activeProfileUserId) {
+                    this.renderProfileDetails(AppState.activeProfileUserId);
+                    this.renderProfileNovels(AppState.activeProfileUserId);
+                }
+            },
+
+            setupAuth: async function(loadingTimeout) {
+                onAuthStateChanged(auth, async (user) => {
+                    AppState.isAuthLoading = false;
+                    AppState.currentUser = user;
+
+                    if (user && this.isUserReal()) {
+                        await this.ensureUserProfileExists(user);
+                    }
+
+                    this.updateUIAuthStatus();
+                    
+                    if (user && !AppState.unsubscribeNovels) {
+                        this.fetchRealtimeData(loadingTimeout);
+                    }
+                });
+
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else if (!auth.currentUser) {
+                        await signInAnonymously(auth);
+                    }
+                } catch (error) {
+                    console.warn("Auth Init Error (Fallback triggered):", error);
+                    clearTimeout(loadingTimeout);
+                    this.useFallbackData();
+                    this.showLoader(false);
+                }
+            },
+
+            showLoader: function(show) {
+                const loader = document.getElementById('global-loader');
+                if (show) loader.classList.remove('hidden');
+                else loader.classList.add('hidden');
+            },
+
+            showView: function(viewId) {
+                document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+                document.getElementById(`view-${viewId}`).classList.remove('hidden');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            },
+
+            toggleMobileMenu: function() {
+                const menu = document.getElementById('mobile-menu');
+                menu.classList.toggle('hidden');
+            },
+
+            isUserReal: function() {
+                return AppState.currentUser && !AppState.currentUser.isAnonymous && AppState.userHasExplicitlyLoggedIn;
+            },
+
+            getUserName: function(uid = null) {
+                if (uid && AppState.profiles[uid] && AppState.profiles[uid].displayName) {
+                    return AppState.profiles[uid].displayName;
+                }
+                if (AppState.currentUser && AppState.currentUser.displayName) {
+                    return AppState.currentUser.displayName;
+                }
+                return 'Penulis';
+            },
+
+            fetchRealtimeData: function(loadingTimeout) {
+                if (!auth.currentUser) return;
+
+                // 1. Listen to Profiles Collection
+                const profilesRef = collection(db, ...PROFILES_PATH);
+                AppState.unsubscribeProfiles = onSnapshot(profilesRef, (snapshot) => {
+                    const profileMap = { ...SAMPLE_PROFILES };
+                    snapshot.forEach(docSnap => {
+                        profileMap[docSnap.id] = docSnap.data();
+                    });
+                    AppState.profiles = profileMap;
+                    
+                    this.renderSidebarAuthors();
+                    if (AppState.activeProfileUserId) {
+                        this.renderProfileDetails(AppState.activeProfileUserId);
+                    }
+                    this.renderNovels();
+                }, (error) => {
+                    console.warn("Profiles Listen Error, using fallback profiles:", error);
+                    if (Object.keys(AppState.profiles).length === 0) {
+                        AppState.profiles = { ...SAMPLE_PROFILES };
+                        this.renderSidebarAuthors();
+                    }
+                });
+
+                // 2. Listen to Novels Collection
+                const novelsRef = collection(db, ...NOVELS_PATH);
+                AppState.unsubscribeNovels = onSnapshot(novelsRef, (snapshot) => {
+                    clearTimeout(loadingTimeout);
+                    const fetchedNovels = [];
+                    snapshot.forEach((docSnap) => {
+                        fetchedNovels.push({ id: docSnap.id, ...docSnap.data() });
+                    });
+
+                    if (fetchedNovels.length === 0) {
+                        AppState.novels = [...SAMPLE_NOVELS];
+                    } else {
+                        fetchedNovels.sort((a, b) => b.createdAt - a.createdAt);
+                        AppState.novels = fetchedNovels;
+                    }
+                    
+                    this.renderNovels();
+                    this.renderSidebarAuthors();
+                    
+                    if (AppState.activeProfileUserId) {
+                        this.renderProfileNovels(AppState.activeProfileUserId);
+                    }
+
+                    this.showLoader(false);
+                }, (error) => {
+                    console.warn("Novels Listen Error, using fallback novels:", error);
+                    clearTimeout(loadingTimeout);
+                    this.useFallbackData();
+                    this.showLoader(false);
+                });
+            },
+
+            ensureUserProfileExists: async function(user) {
+                const profileRef = doc(db, ...PROFILES_PATH, user.uid);
+                const currentName = user.displayName || (user.email ? user.email.split('@')[0] : 'Penulis');
+                
+                if (!AppState.profiles[user.uid]) {
+                    try {
+                        await setDoc(profileRef, {
+                            userId: user.uid,
+                            displayName: currentName,
+                            bio: 'Halo, saya penulis di RuangNovel!',
+                            avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${user.uid}`,
+                            bannerUrl: 'from-indigo-500 via-purple-500 to-pink-500',
+                            followers: [],
+                            following: [],
+                            createdAt: Date.now()
+                        }, { merge: true });
+                    } catch (e) {
+                        console.error("Error creating profile:", e);
+                    }
+                }
+            },
+
+            updateUIAuthStatus: function() {
+                const desktopContainer = document.getElementById('auth-section-desktop');
+                const mobileContainer = document.getElementById('auth-section-mobile');
+                
+                if (this.isUserReal()) {
+                    const name = this.getUserName();
+                    const myProfile = AppState.profiles[AppState.currentUser.uid];
+                    const avatar = myProfile?.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${AppState.currentUser.uid}`;
+
+                    const html = `
+                        <div class="flex items-center gap-2">
+                            <button onclick="app.openProfileView('${AppState.currentUser.uid}')" class="hidden md:flex items-center gap-2 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-full transition">
+                                <img src="${avatar}" class="w-5 h-5 rounded-full object-cover">
+                                <span>${name}</span>
+                            </button>
+                            <button onclick="app.logout()" class="text-xs font-medium text-red-500 hover:text-red-700 py-2 md:py-0 w-full text-left md:w-auto">
+                                <i class="fa-solid fa-right-from-bracket mr-1"></i> Keluar
+                            </button>
+                        </div>
+                    `;
+                    desktopContainer.innerHTML = html;
+                    mobileContainer.innerHTML = `<button onclick="app.openProfileView('${AppState.currentUser.uid}'); app.toggleMobileMenu()" class="block text-sm text-primary font-bold mb-2"><i class="fa-solid fa-user-gear mr-1"></i> Profil Saya (${name})</button>` + html;
+                } else {
+                    const html = `
+                        <div class="flex flex-col md:flex-row gap-2">
+                            <button onclick="app.openAuthModal('login')" class="text-xs font-medium text-gray-600 hover:text-primary py-2 md:py-0">Masuk</button>
+                            <button onclick="app.openAuthModal('register')" class="text-xs font-medium bg-indigo-50 text-primary hover:bg-indigo-100 px-3.5 py-1.5 rounded-full transition w-full md:w-auto mt-2 md:mt-0 text-center">Daftar</button>
+                        </div>
+                    `;
+                    desktopContainer.innerHTML = html;
+                    mobileContainer.innerHTML = html;
+                }
+            },
+
+            renderSidebarAuthors: function() {
+                const container = document.getElementById('sidebar-authors-list');
+                const badge = document.getElementById('author-count-badge');
+                if (!container) return;
+
+                // Extract unique author list from profiles + novels
+                const authorIds = new Set(Object.keys(AppState.profiles));
+                AppState.novels.forEach(n => authorIds.add(n.authorId));
+
+                let authorList = Array.from(authorIds).map(uid => {
+                    const profile = AppState.profiles[uid] || {};
+                    return {
+                        uid,
+                        displayName: profile.displayName || "Penulis",
+                        bio: profile.bio || "Penulis di RuangNovel",
+                        avatarUrl: profile.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${uid}`,
+                        followers: profile.followers || []
+                    };
+                });
+
+                // Filter author by sidebar search
+                if (AppState.authorSearchQuery) {
+                    const q = AppState.authorSearchQuery.toLowerCase();
+                    authorList = authorList.filter(a => a.displayName.toLowerCase().includes(q) || a.bio.toLowerCase().includes(q));
+                }
+
+                badge.textContent = authorList.length;
+
+                if (authorList.length === 0) {
+                    container.innerHTML = `<p class="text-xs text-gray-400 py-3 text-center">Tidak ada penulis ditemukan.</p>`;
+                    return;
+                }
+
+                container.innerHTML = authorList.map(author => {
+                    const isFollowing = this.isUserReal() && author.followers.includes(AppState.currentUser.uid);
+                    const isSelf = this.isUserReal() && author.uid === AppState.currentUser.uid;
+
+                    return `
+                        <div class="p-2.5 rounded-xl border border-gray-100 hover:bg-gray-50/80 transition flex items-center justify-between gap-2 group cursor-pointer" onclick="app.openProfileView('${author.uid}')">
+                            <div class="flex items-center gap-2.5 min-w-0">
+                                <img src="${author.avatarUrl}" class="w-9 h-9 rounded-full object-cover shrink-0 border border-gray-200">
+                                <div class="truncate">
+                                    <h4 class="text-xs font-bold text-gray-900 group-hover:text-primary transition truncate">${author.displayName}</h4>
+                                    <p class="text-[11px] text-gray-400">${author.followers.length} pengikut</p>
+                                </div>
+                            </div>
+                            
+                            ${!isSelf ? `
+                                <button onclick="event.stopPropagation(); app.toggleFollow('${author.uid}')" class="text-[11px] font-semibold px-2.5 py-1 rounded-full border transition shrink-0 ${isFollowing ? 'bg-gray-100 text-gray-600 border-gray-200' : 'bg-primary/10 text-primary border-primary/20 hover:bg-primary hover:text-white'}">
+                                    ${isFollowing ? 'Mengikuti' : '+ Ikuti'}
+                                </button>
+                            ` : `<span class="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">Anda</span>`}
+                        </div>
+                    `;
+                }).join('');
+            },
+
+            filterAuthorsList: function(query) {
+                AppState.authorSearchQuery = query.trim();
+                this.renderSidebarAuthors();
+            },
+
+            handleSearch: function(query) {
+                AppState.searchQuery = query.trim().toLowerCase();
+                const searchInfo = document.getElementById('search-info');
+                const searchInfoText = document.getElementById('search-info-text');
+
+                if (AppState.searchQuery) {
+                    searchInfo.classList.remove('hidden');
+                    searchInfoText.textContent = `Menampilkan hasil pencarian: "${query}"`;
+                } else {
+                    searchInfo.classList.add('hidden');
+                }
+
+                this.renderNovels();
+            },
+
+            clearSearch: function() {
+                document.getElementById('global-search').value = '';
+                AppState.searchQuery = '';
+                document.getElementById('search-info').classList.add('hidden');
+                this.renderNovels();
+            },
+
+            renderNovels: function() {
+                const grid = document.getElementById('novel-grid');
+                const emptyState = document.getElementById('empty-state');
+                if (!grid) return;
+
+                let filteredNovels = AppState.novels;
+
+                if (AppState.searchQuery) {
+                    const q = AppState.searchQuery;
+                    filteredNovels = filteredNovels.filter(n => {
+                        const authorName = (AppState.profiles[n.authorId]?.displayName || n.authorName || '').toLowerCase();
+                        return n.title.toLowerCase().includes(q) || 
+                               n.synopsis.toLowerCase().includes(q) || 
+                               authorName.includes(q);
+                    });
+                }
+
+                if (filteredNovels.length === 0) {
+                    grid.classList.add('hidden');
+                    emptyState.classList.remove('hidden');
+                    return;
+                }
+
+                emptyState.classList.add('hidden');
+                grid.classList.remove('hidden');
+                grid.innerHTML = '';
+
+                filteredNovels.forEach(novel => {
+                    const dateObj = new Date(novel.createdAt);
+                    const dateString = isNaN(dateObj) ? "Baru saja" : dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+                    
+                    const authorProfile = AppState.profiles[novel.authorId] || {};
+                    const authorName = authorProfile.displayName || novel.authorName || "Penulis";
+                    const authorAvatar = authorProfile.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${novel.authorId}`;
+                    
+                    const likesArray = novel.likes || [];
+                    const isLiked = this.isUserReal() && likesArray.includes(AppState.currentUser.uid);
+
+                    const colors = ['from-indigo-500 to-purple-600', 'from-blue-500 to-cyan-600', 'from-emerald-500 to-teal-600', 'from-rose-500 to-red-600', 'from-amber-500 to-orange-600'];
+                    const colorIndex = novel.title.length % colors.length;
+
+                    const card = document.createElement('div');
+                    card.className = "bg-white rounded-2xl shadow-sm hover:shadow-md border border-gray-100 overflow-hidden flex flex-col transition duration-300 cursor-pointer transform hover:-translate-y-1 group";
+                    
+                    card.innerHTML = `
+                        <div class="h-28 bg-gradient-to-r ${colors[colorIndex]} p-4 relative" onclick="app.openNovel('${novel.id}')">
+                            <div class="absolute -bottom-5 left-4 bg-white p-2.5 rounded-xl shadow-sm border border-gray-100">
+                                <i class="fa-solid fa-book-open text-primary text-lg"></i>
+                            </div>
+                        </div>
+                        <div class="p-4 pt-7 flex-grow flex flex-col">
+                            <h3 onclick="app.openNovel('${novel.id}')" class="text-base font-bold text-gray-900 mb-1.5 line-clamp-2 group-hover:text-primary transition">${novel.title}</h3>
+                            <p onclick="app.openNovel('${novel.id}')" class="text-gray-500 text-xs mb-4 line-clamp-3 flex-grow leading-relaxed">${novel.synopsis}</p>
+                            
+                            <!-- Author Row & Actions -->
+                            <div class="mt-auto border-t pt-3 flex items-center justify-between text-xs text-gray-500">
+                                <div onclick="event.stopPropagation(); app.openProfileView('${novel.authorId}')" class="flex items-center gap-2 hover:text-primary transition">
+                                    <img src="${authorAvatar}" class="w-6 h-6 rounded-full object-cover">
+                                    <span class="font-medium text-gray-700 hover:text-primary truncate max-w-[110px]">${authorName}</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <button onclick="event.stopPropagation(); app.toggleLikeNovel('${novel.id}')" class="flex items-center gap-1 ${isLiked ? 'text-rose-500 font-bold' : 'text-gray-400 hover:text-rose-500'} transition">
+                                        <i class="${isLiked ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
+                                        <span>${likesArray.length}</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+            },
+
+            openProfileView: function(userId) {
+                AppState.activeProfileUserId = userId;
+                this.renderProfileDetails(userId);
+                this.renderProfileNovels(userId);
+                this.showView('profile');
+            },
+
+            renderProfileDetails: function(userId) {
+                const profile = AppState.profiles[userId] || {};
+                const name = profile.displayName || "Penulis";
+                const bio = profile.bio || "Belum ada bio singkat.";
+                const avatar = profile.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${userId}`;
+                const banner = profile.bannerUrl || 'from-indigo-500 via-purple-500 to-pink-500';
+
+                document.getElementById('profile-name').textContent = name;
+                document.getElementById('profile-id-text').textContent = `@${userId.substring(0, 8)}`;
+                document.getElementById('profile-bio').textContent = bio;
+                document.getElementById('profile-avatar').src = avatar;
+                document.getElementById('author-novel-title-name').textContent = name;
+
+                // Render Banner (Gradient or Image)
+                const bannerEl = document.getElementById('profile-banner');
+                if (banner.startsWith('http://') || banner.startsWith('https://')) {
+                    bannerEl.className = "h-40 md:h-52 bg-cover bg-center relative";
+                    bannerEl.style.backgroundImage = `url('${banner}')`;
+                } else {
+                    bannerEl.style.backgroundImage = 'none';
+                    bannerEl.className = `h-40 md:h-52 bg-gradient-to-r ${banner} relative`;
+                }
+
+                // Calculate Stats
+                const userNovels = AppState.novels.filter(n => n.authorId === userId);
+                const totalLikesReceived = userNovels.reduce((sum, n) => sum + (n.likes?.length || 0), 0);
+                const followers = profile.followers || [];
+                const following = profile.following || [];
+
+                document.getElementById('stat-novels').textContent = userNovels.length;
+                document.getElementById('stat-likes').textContent = totalLikesReceived;
+                document.getElementById('stat-followers').textContent = followers.length;
+                document.getElementById('stat-following').textContent = following.length;
+
+                // Actions Container (Edit or Follow)
+                const actionsContainer = document.getElementById('profile-actions-container');
+                const isSelf = this.isUserReal() && userId === AppState.currentUser.uid;
+                const isFollowing = this.isUserReal() && followers.includes(AppState.currentUser.uid);
+
+                if (isSelf) {
+                    actionsContainer.innerHTML = `
+                        <button onclick="app.openEditProfileModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-full font-semibold text-xs transition shadow-sm flex items-center">
+                            <i class="fa-solid fa-user-pen mr-2"></i> Edit Profil
+                        </button>
+                    `;
+                } else {
+                    actionsContainer.innerHTML = `
+                        <button onclick="app.toggleFollow('${userId}')" class="${isFollowing ? 'bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-red-600' : 'bg-primary text-white hover:bg-primaryHover'} px-5 py-2 rounded-full font-semibold text-xs transition shadow-sm flex items-center">
+                            <i class="fa-solid ${isFollowing ? 'fa-user-check' : 'fa-user-plus'} mr-2"></i> ${isFollowing ? 'Mengikuti' : 'Ikuti Penulis'}
+                        </button>
+                    `;
+                }
+            },
+
+            renderProfileNovels: function(userId) {
+                const grid = document.getElementById('profile-novels-grid');
+                const empty = document.getElementById('profile-novels-empty');
+                if (!grid) return;
+
+                const userNovels = AppState.novels.filter(n => n.authorId === userId);
+
+                if (userNovels.length === 0) {
+                    grid.classList.add('hidden');
+                    empty.classList.remove('hidden');
+                    return;
+                }
+
+                empty.classList.add('hidden');
+                grid.classList.remove('hidden');
+                grid.innerHTML = '';
+
+                userNovels.forEach(novel => {
+                    const likesArray = novel.likes || [];
+                    const isLiked = this.isUserReal() && likesArray.includes(AppState.currentUser.uid);
+
+                    const card = document.createElement('div');
+                    card.className = "bg-white rounded-2xl shadow-sm border border-gray-100 p-4 hover:shadow-md transition cursor-pointer flex flex-col";
+                    card.onclick = () => this.openNovel(novel.id);
+
+                    card.innerHTML = `
+                        <h4 class="font-bold text-gray-900 mb-1 line-clamp-1 hover:text-primary transition">${novel.title}</h4>
+                        <p class="text-xs text-gray-500 mb-3 line-clamp-2 leading-relaxed flex-grow">${novel.synopsis}</p>
+                        <div class="mt-auto border-t pt-2.5 flex justify-between items-center text-xs text-gray-400">
+                            <span>${new Date(novel.createdAt).toLocaleDateString('id-ID')}</span>
+                            <span class="${isLiked ? 'text-rose-500 font-bold' : ''}"><i class="fa-solid fa-heart mr-1"></i> ${likesArray.length}</span>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+            },
+
+            toggleFollow: async function(targetUserId) {
+                if (!this.isUserReal()) {
+                    this.showToast("Silakan daftar atau masuk terlebih dahulu untuk mengikuti akun.", "info");
+                    this.openAuthModal('register');
+                    return;
+                }
+
+                const myUid = AppState.currentUser.uid;
+                if (targetUserId === myUid) return;
+
+                const targetProfile = AppState.profiles[targetUserId] || { userId: targetUserId, displayName: "Penulis", followers: [], following: [] };
+                const myProfile = AppState.profiles[myUid] || { userId: myUid, displayName: this.getUserName(), followers: [], following: [] };
+
+                let targetFollowers = [...(targetProfile.followers || [])];
+                let myFollowing = [...(myProfile.following || [])];
+
+                const isFollowing = targetFollowers.includes(myUid);
+
+                if (isFollowing) {
+                    targetFollowers = targetFollowers.filter(id => id !== myUid);
+                    myFollowing = myFollowing.filter(id => id !== targetUserId);
+                } else {
+                    targetFollowers.push(myUid);
+                    myFollowing.push(targetUserId);
+                }
+
+                targetProfile.followers = targetFollowers;
+                myProfile.following = myFollowing;
+                AppState.profiles[targetUserId] = targetProfile;
+                AppState.profiles[myUid] = myProfile;
+
+                this.renderSidebarAuthors();
+                if (AppState.activeProfileUserId) {
+                    this.renderProfileDetails(AppState.activeProfileUserId);
+                }
+
+                try {
+                    if (!AppState.isFallbackMode) {
+                        await updateDoc(doc(db, ...PROFILES_PATH, targetUserId), { followers: targetFollowers });
+                        await updateDoc(doc(db, ...PROFILES_PATH, myUid), { following: myFollowing });
+                    }
+                    this.showToast(isFollowing ? "Berhenti mengikuti." : "Berhasil mengikuti!", "success");
+                } catch (error) {
+                    console.warn("Follow Sync Error:", error);
+                    this.showToast(isFollowing ? "Berhenti mengikuti." : "Berhasil mengikuti!", "success");
+                }
+            },
+
+            toggleLikeNovel: async function(novelId) {
+                if (!this.isUserReal()) {
+                    this.showToast("Silakan masuk atau daftar terlebih dahulu untuk menyukai novel.", "info");
+                    this.openAuthModal('login');
+                    return;
+                }
+
+                const novel = AppState.novels.find(n => n.id === novelId);
+                if (!novel) return;
+
+                const myUid = AppState.currentUser.uid;
+                let likes = [...(novel.likes || [])];
+
+                if (likes.includes(myUid)) {
+                    likes = likes.filter(id => id !== myUid);
+                } else {
+                    likes.push(myUid);
+                }
+
+                novel.likes = likes;
+                this.renderNovels();
+                if (AppState.currentReadingNovelId === novelId) {
+                    this.updateReadLikeUI(likes);
+                }
+
+                try {
+                    if (!AppState.isFallbackMode) {
+                        await updateDoc(doc(db, ...NOVELS_PATH, novelId), { likes });
+                    }
+                } catch (e) {
+                    console.warn("Like sync error:", e);
+                }
+            },
+
+            openEditProfileModal: function() {
+                if (!this.isUserReal()) return;
+
+                const myProfile = AppState.profiles[AppState.currentUser.uid] || {};
+                document.getElementById('edit-display-name').value = myProfile.displayName || this.getUserName();
+                document.getElementById('edit-bio').value = myProfile.bio || '';
+                document.getElementById('edit-avatar-url').value = myProfile.avatarUrl || '';
+                document.getElementById('edit-banner-url').value = myProfile.bannerUrl || '';
+
+                const modal = document.getElementById('modal-edit-profile');
+                const content = document.getElementById('modal-edit-profile-content');
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    modal.classList.remove('opacity-0');
+                    content.classList.remove('scale-95');
+                }, 10);
+            },
+
+            closeEditProfileModal: function() {
+                const modal = document.getElementById('modal-edit-profile');
+                const content = document.getElementById('modal-edit-profile-content');
+                modal.classList.add('opacity-0');
+                content.classList.add('scale-95');
+                setTimeout(() => modal.classList.add('hidden'), 300);
+            },
+
+            renderPresets: function() {
+                const avatarContainer = document.getElementById('avatar-presets');
+                const bannerContainer = document.getElementById('banner-presets');
+
+                avatarContainer.innerHTML = AppState.avatarPresets.map(url => `
+                    <img src="${url}" onclick="document.getElementById('edit-avatar-url').value='${url}'" class="w-9 h-9 rounded-full border-2 border-transparent hover:border-primary cursor-pointer object-cover bg-gray-100">
+                `).join('');
+
+                bannerContainer.innerHTML = AppState.bannerPresets.map(gradient => `
+                    <div onclick="document.getElementById('edit-banner-url').value='${gradient}'" class="h-8 rounded-lg bg-gradient-to-r ${gradient} cursor-pointer border hover:border-black transition"></div>
+                `).join('');
+            },
+
+            submitEditProfile: async function(e) {
+                e.preventDefault();
+                if (!this.isUserReal()) return;
+
+                const name = document.getElementById('edit-display-name').value.trim();
+                const bio = document.getElementById('edit-bio').value.trim();
+                let avatarUrl = document.getElementById('edit-avatar-url').value.trim();
+                let bannerUrl = document.getElementById('edit-banner-url').value.trim();
+
+                if (!avatarUrl) avatarUrl = `https://api.dicebear.com/7.x/bottts/svg?seed=${AppState.currentUser.uid}`;
+                if (!bannerUrl) bannerUrl = 'from-indigo-500 via-purple-500 to-pink-500';
+
+                const btn = document.getElementById('btn-save-profile');
+                btn.disabled = true;
+                btn.textContent = "Menyimpan...";
+
+                try {
+                    await updateProfile(auth.currentUser, { displayName: name });
+                    await updateDoc(doc(db, ...PROFILES_PATH, AppState.currentUser.uid), {
+                        displayName: name,
+                        bio,
+                        avatarUrl,
+                        bannerUrl
+                    });
+
+                    this.showToast("Profil berhasil diperbarui!", "success");
+                    this.closeEditProfileModal();
+                } catch (error) {
+                    console.error("Save Profile Error:", error);
+                    this.showToast("Gagal memperbarui profil.", "error");
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = "Simpan Profil";
+                }
+            },
+
+            handleWriteNovelClick: function() {
+                this.showView('write');
+            },
+
+            openAuthModal: function(tab = 'login') {
+                const modal = document.getElementById('modal-auth');
+                const content = document.getElementById('modal-auth-content');
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    modal.classList.remove('opacity-0');
+                    content.classList.remove('scale-95');
+                }, 10);
+                this.switchAuthTab(tab);
+            },
+
+            closeAuthModal: function() {
+                const modal = document.getElementById('modal-auth');
+                const content = document.getElementById('modal-auth-content');
+                modal.classList.add('opacity-0');
+                content.classList.add('scale-95');
+                setTimeout(() => modal.classList.add('hidden'), 300);
+            },
+
+            switchAuthTab: function(tab) {
+                const isLogin = tab === 'login';
+                document.getElementById('form-login').classList.toggle('hidden', !isLogin);
+                document.getElementById('form-register').classList.toggle('hidden', isLogin);
+                
+                document.getElementById('tab-login').className = `flex-1 py-4 text-center font-semibold ${isLogin ? 'text-primary border-b-2 border-primary' : 'text-gray-500'} text-sm cursor-pointer`;
+                document.getElementById('tab-register').className = `flex-1 py-4 text-center font-semibold ${!isLogin ? 'text-primary border-b-2 border-primary' : 'text-gray-500'} text-sm cursor-pointer`;
+            },
+
+            handleAuth: async function(e, type) {
+                e.preventDefault();
+                const btn = document.getElementById(type === 'login' ? 'btn-login' : 'btn-register');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i>`;
+                btn.disabled = true;
+
+                try {
+                    if (type === 'login') {
+                        const email = document.getElementById('login-email').value;
+                        const pass = document.getElementById('login-password').value;
+                        await signInWithEmailAndPassword(auth, email, pass);
+                        AppState.userHasExplicitlyLoggedIn = true;
+                        this.showToast("Berhasil masuk!", "success");
+                    } else {
+                        const email = document.getElementById('reg-email').value;
+                        const pass = document.getElementById('reg-password').value;
+                        const name = document.getElementById('reg-name').value;
+                        
+                        const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+                        await updateProfile(userCredential.user, { displayName: name });
+                        AppState.userHasExplicitlyLoggedIn = true;
+                        
+                        await this.ensureUserProfileExists(userCredential.user);
+                        this.showToast("Akun berhasil dibuat!", "success");
+                    }
+
+                    this.closeAuthModal();
+                    
+                    if (AppState.pendingNovel) {
+                        await this.publishNovelData(AppState.pendingNovel);
+                    }
+
+                } catch (error) {
+                    let msg = "Terjadi kesalahan.";
+                    if (error.code === 'auth/email-already-in-use') msg = "Email sudah digunakan.";
+                    else if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') msg = "Email atau password salah.";
+                    
+                    document.getElementById('auth-alert-msg').textContent = msg;
+                    document.getElementById('auth-alert').classList.remove('hidden');
+                } finally {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            },
+
+            logout: async function() {
+                try {
+                    this.showLoader(true);
+                    AppState.userHasExplicitlyLoggedIn = false;
+                    await signOut(auth);
+                    await signInAnonymously(auth);
+                    this.showToast("Berhasil keluar.", "success");
+                    this.showView('home');
+                } catch (e) {
+                    this.showToast("Gagal keluar.", "error");
+                } finally {
+                    this.showLoader(false);
+                }
+            },
+
+            submitNovel: async function(e) {
+                e.preventDefault();
+                const title = document.getElementById('novel-title').value.trim();
+                const synopsis = document.getElementById('novel-synopsis').value.trim();
+                const content = document.getElementById('novel-content').value.trim();
+
+                if (!title || !synopsis || !content) return;
+
+                AppState.pendingNovel = { title, synopsis, content };
+
+                if (!this.isUserReal()) {
+                    this.showToast("Silakan buat akun atau masuk terlebih dahulu untuk menerbitkan novel Anda.", "info");
+                    this.openAuthModal('register');
+                    return;
+                }
+
+                await this.publishNovelData(AppState.pendingNovel);
+            },
+
+            publishNovelData: async function(novelData) {
+                const btn = document.getElementById('btn-publish');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Menerbitkan...`;
+                }
+
+                try {
+                    if (AppState.isFallbackMode || !auth.currentUser) {
+                        const newNovel = {
+                            id: 'novel-' + Date.now(),
+                            title: novelData.title,
+                            synopsis: novelData.synopsis,
+                            content: novelData.content,
+                            authorId: AppState.currentUser ? AppState.currentUser.uid : 'author-local',
+                            authorName: this.getUserName(),
+                            createdAt: Date.now(),
+                            likes: []
+                        };
+                        AppState.novels.unshift(newNovel);
+                        this.renderNovels();
+                    } else {
+                        const novelsRef = collection(db, ...NOVELS_PATH);
+                        await addDoc(novelsRef, {
+                            title: novelData.title,
+                            synopsis: novelData.synopsis,
+                            content: novelData.content,
+                            authorId: AppState.currentUser.uid,
+                            authorName: this.getUserName(),
+                            createdAt: Date.now(),
+                            likes: []
+                        });
+                    }
+
+                    AppState.pendingNovel = null;
+                    this.showToast("Hore! Novelmu berhasil diterbitkan.", "success");
+                    document.getElementById('form-write').reset();
+                    this.showView('home');
+                } catch (error) {
+                    console.error("Publish Error:", error);
+                    const newNovel = {
+                        id: 'novel-' + Date.now(),
+                        title: novelData.title,
+                        synopsis: novelData.synopsis,
+                        content: novelData.content,
+                        authorId: AppState.currentUser ? AppState.currentUser.uid : 'author-local',
+                        authorName: this.getUserName(),
+                        createdAt: Date.now(),
+                        likes: []
+                    };
+                    AppState.novels.unshift(newNovel);
+                    this.renderNovels();
+                    AppState.pendingNovel = null;
+                    this.showToast("Hore! Novelmu berhasil diterbitkan.", "success");
+                    document.getElementById('form-write').reset();
+                    this.showView('home');
+                } finally {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = `<span>Terbitkan</span><i class="fa-solid fa-paper-plane ml-2"></i>`;
+                    }
+                }
+            },
+
+            openNovel: function(id) {
+                const novel = AppState.novels.find(n => n.id === id);
+                if (!novel) return;
+
+                AppState.currentReadingNovelId = id;
+                AppState.currentReadingNovelAuthorId = novel.authorId;
+
+                const dateObj = new Date(novel.createdAt);
+                const dateString = isNaN(dateObj) ? "-" : dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+                const authorProfile = AppState.profiles[novel.authorId] || {};
+                const authorName = authorProfile.displayName || novel.authorName || "Penulis";
+
+                document.getElementById('read-title').textContent = novel.title;
+                document.getElementById('read-author').textContent = authorName;
+                document.getElementById('btn-read-author').onclick = () => this.openProfileView(novel.authorId);
+                document.getElementById('read-date').textContent = dateString;
+                document.getElementById('read-synopsis').textContent = novel.synopsis;
+                
+                const safeContent = novel.content
+                    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                document.getElementById('read-content').innerHTML = safeContent;
+
+                this.updateReadLikeUI(novel.likes || []);
+                this.showView('read');
+            },
+
+            updateReadLikeUI: function(likesArray) {
+                const isLiked = this.isUserReal() && likesArray.includes(AppState.currentUser.uid);
+                const likeBtn = document.getElementById('btn-like-read');
+                const likeIcon = document.getElementById('read-like-icon');
+                const likeText = document.getElementById('read-like-text');
+
+                likeBtn.onclick = () => this.toggleLikeNovel(AppState.currentReadingNovelId);
+                likeIcon.className = `${isLiked ? 'fa-solid' : 'fa-regular'} fa-heart text-lg`;
+                likeText.textContent = `Suka (${likesArray.length})`;
+            },
+
+            showToast: function(message, type = 'info') {
+                const container = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                let icon = type === 'success' ? '<i class="fa-solid fa-circle-check"></i>' : (type === 'error' ? '<i class="fa-solid fa-circle-xmark"></i>' : '<i class="fa-solid fa-circle-info"></i>');
+                let bgClass = type === 'success' ? 'bg-green-50 text-green-800 border-green-200' : (type === 'error' ? 'bg-red-50 text-red-800 border-red-200' : 'bg-blue-50 text-blue-800 border-blue-200');
+
+                toast.className = `toast-enter flex items-center p-3.5 rounded-xl shadow-lg border ${bgClass} pointer-events-auto relative overflow-hidden text-xs font-medium`;
+                toast.innerHTML = `
+                    <div class="mr-2.5 text-base">${icon}</div>
+                    <div class="pr-4">${message}</div>
+                    <button class="absolute right-2 top-2 text-gray-400 hover:text-gray-600" onclick="this.parentElement.remove()"><i class="fa-solid fa-xmark"></i></button>
+                `;
+
+                container.appendChild(toast);
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.classList.replace('toast-enter', 'toast-exit');
+                        setTimeout(() => toast.remove(), 300);
+                    }
+                }, 3000);
+            }
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            app.init();
+        });
+    </script>
+</body>
+</html>
