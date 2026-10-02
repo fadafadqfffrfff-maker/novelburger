@@ -384,12 +384,12 @@
                 <!-- Login Form -->
                 <form id="form-login" onsubmit="app.handleAuth(event, 'login')">
                     <div class="mb-4">
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Email</label>
-                        <input type="email" id="login-email" required class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition text-sm">
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Username</label>
+                        <input type="text" id="login-username" required autocomplete="username" class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition text-sm" placeholder="Masukkan username">
                     </div>
                     <div class="mb-6">
                         <label class="block text-xs font-medium text-gray-700 mb-1">Password</label>
-                        <input type="password" id="login-password" required class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition text-sm">
+                        <input type="password" id="login-password" required autocomplete="current-password" class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition text-sm" placeholder="Masukkan password">
                     </div>
                     <button type="submit" id="btn-login" class="w-full bg-primary text-white py-3 rounded-xl font-medium text-sm hover:bg-primaryHover transition flex justify-center items-center">
                         <span>Masuk</span>
@@ -399,16 +399,17 @@
                 <!-- Register Form -->
                 <form id="form-register" onsubmit="app.handleAuth(event, 'register')" class="hidden">
                     <div class="mb-4">
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Nama Tampilan / Penulis</label>
-                        <input type="text" id="reg-name" required class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition text-sm" placeholder="Contoh: Penulis Senja">
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Display Name</label>
+                        <input type="text" id="reg-name" required maxlength="40" autocomplete="name" class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition text-sm" placeholder="Contoh: Penulis Senja">
                     </div>
                     <div class="mb-4">
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Email</label>
-                        <input type="email" id="reg-email" required class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition text-sm">
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Username</label>
+                        <input type="text" id="reg-username" required minlength="3" maxlength="20" pattern="[A-Za-z0-9_]+" autocomplete="username" class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition text-sm" placeholder="Contoh: penulissenja">
+                        <p class="text-[11px] text-gray-400 mt-1">3–20 karakter, hanya huruf, angka, dan underscore.</p>
                     </div>
                     <div class="mb-6">
                         <label class="block text-xs font-medium text-gray-700 mb-1">Password</label>
-                        <input type="password" id="reg-password" required minlength="6" class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition text-sm" placeholder="Minimal 6 karakter">
+                        <input type="password" id="reg-password" required minlength="6" autocomplete="new-password" class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition text-sm" placeholder="Minimal 6 karakter">
                     </div>
                     <button type="submit" id="btn-register" class="w-full bg-primary text-white py-3 rounded-xl font-medium text-sm hover:bg-primaryHover transition flex justify-center items-center">
                         <span>Buat Akun</span>
@@ -440,6 +441,13 @@
                 <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">URL Foto Profil (PP)</label>
                     <input type="url" id="edit-avatar-url" placeholder="https://..." class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none text-sm mb-2">
+                    <div class="flex items-center gap-2 mb-2">
+                        <label for="cloudinary-avatar-file" class="cursor-pointer inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-50 text-primary hover:bg-indigo-100 text-xs font-semibold transition">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> Upload ke Cloudinary
+                        </label>
+                        <input type="file" id="cloudinary-avatar-file" accept="image/*" class="hidden" onchange="app.uploadProfileImage('avatar', this.files[0])">
+                        <span id="cloudinary-avatar-status" class="text-[11px] text-gray-400"></span>
+                    </div>
                     <p class="text-[11px] text-gray-400 mb-2">Atau pilih preset foto profil berikut:</p>
                     <div class="flex gap-2" id="avatar-presets">
                         <!-- Injected via JS -->
@@ -449,10 +457,23 @@
                 <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">URL Gambar Banner</label>
                     <input type="url" id="edit-banner-url" placeholder="https://..." class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none text-sm mb-2">
+                    <div class="flex items-center gap-2 mb-2">
+                        <label for="cloudinary-banner-file" class="cursor-pointer inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-50 text-primary hover:bg-indigo-100 text-xs font-semibold transition">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> Upload ke Cloudinary
+                        </label>
+                        <input type="file" id="cloudinary-banner-file" accept="image/*" class="hidden" onchange="app.uploadProfileImage('banner', this.files[0])">
+                        <span id="cloudinary-banner-status" class="text-[11px] text-gray-400"></span>
+                    </div>
                     <p class="text-[11px] text-gray-400 mb-2">Atau pilih tema gradient banner berikut:</p>
                     <div class="grid grid-cols-4 gap-2" id="banner-presets">
                         <!-- Injected via JS -->
                     </div>
+                </div>
+
+                <div class="pt-2">
+                    <button type="button" onclick="app.configureCloudinaryPreset()" class="text-[11px] text-gray-500 hover:text-primary transition">
+                        <i class="fa-solid fa-gear mr-1"></i> Atur Upload Preset Cloudinary
+                    </button>
                 </div>
 
                 <div class="pt-4 flex justify-end gap-3 border-t">
@@ -469,26 +490,67 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, updateDoc, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Environment Config
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'ruangnovel-app';
-        let firebaseConfig = {};
-        
-        try {
-            if (typeof __firebase_config !== 'undefined') {
-                firebaseConfig = JSON.parse(__firebase_config);
-            } else {
-                throw new Error("Config not found");
-            }
-        } catch (e) {
-            console.warn("Menggunakan konfigurasi fallback Firebase.");
-            firebaseConfig = {
-                apiKey: "dummy", authDomain: "dummy.firebaseapp.com", projectId: "dummy", storageBucket: "dummy.appspot.com", messagingSenderId: "123", appId: "1:123:web:123"
-            };
-        }
+        // Firebase configuration - DarkNovel
+        const appId = 'darknovel-236fd';
+        const firebaseConfig = {
+            apiKey: "AIzaSyCPJRQzPePxl26Um14jWpghgnZEjlx9aPE",
+            authDomain: "darknovel-236fd.firebaseapp.com",
+            projectId: "darknovel-236fd",
+            storageBucket: "darknovel-236fd.firebasestorage.app",
+            messagingSenderId: "811950802400",
+            appId: "1:811950802400:web:15d86ca9e23eb264071785",
+            measurementId: "G-DSD6VXK7CX"
+        };
 
         const appFirebase = initializeApp(firebaseConfig);
         const db = getFirestore(appFirebase);
         const auth = getAuth(appFirebase);
+
+        // Cloudinary configuration
+        // API Key dan Cloud Name boleh berada di frontend. JANGAN masukkan API Secret.
+        const CLOUDINARY_CONFIG = {
+            cloudName: 'nmcmyhpr',
+            apiKey: '869492595864973',
+            uploadPreset: localStorage.getItem('ruangnovel_cloudinary_upload_preset') || ''
+        };
+
+        async function uploadToCloudinary(file, folder = 'ruangnovel') {
+            if (!file) throw new Error('File tidak ditemukan.');
+            if (!CLOUDINARY_CONFIG.uploadPreset) {
+                const preset = window.prompt(
+                    'Masukkan Cloudinary Upload Preset (Unsigned) untuk RuangNovel:',
+                    localStorage.getItem('ruangnovel_cloudinary_upload_preset') || ''
+                );
+                if (!preset || !preset.trim()) {
+                    throw new Error('Cloudinary Upload Preset belum diatur.');
+                }
+                CLOUDINARY_CONFIG.uploadPreset = preset.trim();
+                localStorage.setItem('ruangnovel_cloudinary_upload_preset', CLOUDINARY_CONFIG.uploadPreset);
+            }
+
+            if (!file.type.startsWith('image/')) {
+                throw new Error('Hanya file gambar yang boleh diunggah.');
+            }
+            if (file.size > 10 * 1024 * 1024) {
+                throw new Error('Ukuran gambar maksimal 10 MB.');
+            }
+
+            const endpoint = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/image/upload`;
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
+            formData.append('folder', folder);
+
+            const response = await fetch(endpoint, { method: 'POST', body: formData });
+            const data = await response.json();
+
+            if (!response.ok || !data.secure_url) {
+                console.error('Cloudinary upload error:', data);
+                throw new Error(data.error?.message || 'Upload Cloudinary gagal.');
+            }
+
+            return data.secure_url;
+        }
 
         // Strict Paths for Public Data (RULE 1)
         const NOVELS_PATH = ['artifacts', appId, 'public', 'data', 'novels'];
@@ -732,6 +794,7 @@
                     try {
                         await setDoc(profileRef, {
                             userId: user.uid,
+                            username: user.email ? user.email.split('@')[0] : '',
                             displayName: currentName,
                             bio: 'Halo, saya penulis di RuangNovel!',
                             avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${user.uid}`,
@@ -952,7 +1015,7 @@
                 const banner = profile.bannerUrl || 'from-indigo-500 via-purple-500 to-pink-500';
 
                 document.getElementById('profile-name').textContent = name;
-                document.getElementById('profile-id-text').textContent = `@${userId.substring(0, 8)}`;
+                document.getElementById('profile-id-text').textContent = `@${profile.username || userId.substring(0, 8)}`;
                 document.getElementById('profile-bio').textContent = bio;
                 document.getElementById('profile-avatar').src = avatar;
                 document.getElementById('author-novel-title-name').textContent = name;
@@ -1135,6 +1198,40 @@
                 }, 10);
             },
 
+            configureCloudinaryPreset: function() {
+                const current = localStorage.getItem('ruangnovel_cloudinary_upload_preset') || '';
+                const preset = window.prompt('Masukkan Cloudinary Upload Preset (Unsigned):', current);
+                if (preset === null) return;
+                if (!preset.trim()) {
+                    localStorage.removeItem('ruangnovel_cloudinary_upload_preset');
+                    CLOUDINARY_CONFIG.uploadPreset = '';
+                    this.showToast('Upload Preset Cloudinary dihapus.', 'info');
+                    return;
+                }
+                CLOUDINARY_CONFIG.uploadPreset = preset.trim();
+                localStorage.setItem('ruangnovel_cloudinary_upload_preset', CLOUDINARY_CONFIG.uploadPreset);
+                this.showToast('Upload Preset Cloudinary tersimpan di browser ini.', 'success');
+            },
+
+            uploadProfileImage: async function(type, file) {
+                if (!file) return;
+                const statusId = type === 'avatar' ? 'cloudinary-avatar-status' : 'cloudinary-banner-status';
+                const inputId = type === 'avatar' ? 'edit-avatar-url' : 'edit-banner-url';
+                const status = document.getElementById(statusId);
+                if (status) status.textContent = 'Mengunggah...';
+
+                try {
+                    const url = await uploadToCloudinary(file, `ruangnovel/${type}s`);
+                    document.getElementById(inputId).value = url;
+                    if (status) status.textContent = '✓ Upload berhasil';
+                    this.showToast(`${type === 'avatar' ? 'Foto profil' : 'Banner'} berhasil diupload.`, 'success');
+                } catch (error) {
+                    console.error('Cloudinary upload error:', error);
+                    if (status) status.textContent = '';
+                    this.showToast(error.message || 'Upload gagal.', 'error');
+                }
+            },
+
             closeEditProfileModal: function() {
                 const modal = document.getElementById('modal-edit-profile');
                 const content = document.getElementById('modal-edit-profile-content');
@@ -1233,35 +1330,59 @@
 
                 try {
                     if (type === 'login') {
-                        const email = document.getElementById('login-email').value;
+                        const username = document.getElementById('login-username').value.trim().toLowerCase();
                         const pass = document.getElementById('login-password').value;
-                        await signInWithEmailAndPassword(auth, email, pass);
+
+                        if (!/^[a-z0-9_]{3,20}$/.test(username)) {
+                            throw { code: 'auth/invalid-username' };
+                        }
+
+                        // Firebase Email/Password tetap dipakai di belakang layar.
+                        // Pengguna cukup memasukkan username dan password.
+                        const internalEmail = `${username}@ruangnovel.local`;
+                        await signInWithEmailAndPassword(auth, internalEmail, pass);
                         AppState.userHasExplicitlyLoggedIn = true;
                         this.showToast("Berhasil masuk!", "success");
                     } else {
-                        const email = document.getElementById('reg-email').value;
+                        const name = document.getElementById('reg-name').value.trim();
+                        const username = document.getElementById('reg-username').value.trim().toLowerCase();
                         const pass = document.getElementById('reg-password').value;
-                        const name = document.getElementById('reg-name').value;
-                        
-                        const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+
+                        if (!/^[a-z0-9_]{3,20}$/.test(username)) {
+                            throw { code: 'auth/invalid-username' };
+                        }
+
+                        const internalEmail = `${username}@ruangnovel.local`;
+                        const userCredential = await createUserWithEmailAndPassword(auth, internalEmail, pass);
                         await updateProfile(userCredential.user, { displayName: name });
                         AppState.userHasExplicitlyLoggedIn = true;
-                        
+
                         await this.ensureUserProfileExists(userCredential.user);
+                        await updateDoc(doc(db, ...PROFILES_PATH, userCredential.user.uid), {
+                            username,
+                            displayName: name
+                        });
+
+                        if (AppState.profiles[userCredential.user.uid]) {
+                            AppState.profiles[userCredential.user.uid].username = username;
+                            AppState.profiles[userCredential.user.uid].displayName = name;
+                        }
+
                         this.showToast("Akun berhasil dibuat!", "success");
                     }
 
                     this.closeAuthModal();
-                    
+
                     if (AppState.pendingNovel) {
                         await this.publishNovelData(AppState.pendingNovel);
                     }
 
                 } catch (error) {
                     let msg = "Terjadi kesalahan.";
-                    if (error.code === 'auth/email-already-in-use') msg = "Email sudah digunakan.";
-                    else if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') msg = "Email atau password salah.";
-                    
+                    if (error.code === 'auth/email-already-in-use') msg = "Username sudah digunakan.";
+                    else if (error.code === 'auth/invalid-username') msg = "Username harus 3–20 karakter dan hanya boleh berisi huruf, angka, atau underscore.";
+                    else if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') msg = "Username atau password salah.";
+
                     document.getElementById('auth-alert-msg').textContent = msg;
                     document.getElementById('auth-alert').classList.remove('hidden');
                 } finally {
